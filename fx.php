@@ -178,3 +178,198 @@ function bbconnect_relationships_get_user_relationships_by_type($user, $type) {
     return false;
 }
 
+/**
+ * Get groups for user
+ * @param WP_User|integer $user User to retrieve groups for. Can be either user ID or WP_User object.
+ * @return array|WP_Error List of groups or WP_Error
+ */
+function bbconnect_relationships_get_user_groups($user) {
+    if (is_numeric($user)) {
+        $user = get_user_by('id', $user);
+    }
+    $search_criteria = array(
+            'field_filters' => array(
+                    array(
+                            'key' => '5',
+                            'operator' => 'contains',
+                            'value' => '"'.$user->ID.'"', // A little hacky, but because it's stored as a serialised array, this is the best way we've got to look for a specific ID
+                    ),
+            ),
+    );
+    return GFAPI::get_entries(bbconnect_relationships_get_group_form(), $search_criteria);
+}
+
+/**
+ * Retrieve group details for the specified ID
+ * @param integer $group_id
+ * @return array|WP_Error GF entry or WP_Error
+ */
+function bbconnect_relationships_get_group($group_id) {
+    return GFAPI::get_entry($group_id);
+}
+
+/**
+ * Get list of users who are members of the specified group
+ * @param array|integer $group GF entry or entry ID
+ * @return array of WP_User objects
+ */
+function bbconnect_relationships_get_group_members($group) {
+    if (!is_array($group)) {
+        $group = bbconnect_relationships_get_group($group);
+    }
+    $user_ids = maybe_unserialize($group[5]);
+    if (!empty($user_ids)) {
+        $args = array(
+                'include' => $user_ids,
+        );
+        return get_users($args);
+    }
+    return array();
+}
+
+/**
+ * Add user to a group
+ * @param WP_User|integer $user User to add to group. Can be either user ID or WP_User object.
+ * @param array|integer $group GF entry or entry ID
+ * @return boolean|WP_Error True on success, False if user already exists in group, WP_Error if something else went wrong
+ */
+function bbconnect_relationships_add_user_to_group($user, $group) {
+    if (is_numeric($user)) {
+        $user = get_user_by('id', $user);
+    }
+    if (!is_array($group)) {
+        $group = bbconnect_relationships_get_group($group);
+    }
+    $user_ids = maybe_unserialize($group[5]);
+    if (!in_array($user->ID, $user_ids)) {
+        $user_ids[] = (string)$user->ID; // Have to make sure it's a string else our search won't work
+        $group[5] = maybe_serialize($user_ids);
+        return GFAPI::update_entry($group);
+    }
+    return false;
+}
+
+/**
+ * Remove user from a group
+ * @param WP_User|integer $user User to remove from group. Can be either user ID or WP_User object.
+ * @param array|integer $group GF entry or entry ID
+ * @return boolean|WP_Error True on success, False if user doesn't exist in group, WP_Error if something else went wrong
+ */
+function bbconnect_relationships_remove_user_from_group($user, $group) {
+    if (is_numeric($user)) {
+        $user = get_user_by('id', $user);
+    }
+    if (!is_array($group)) {
+        $group = bbconnect_relationships_get_group($group);
+    }
+    $user_ids = maybe_unserialize($group[5]);
+    if (false !== ($key = array_search($user->ID, $user_ids))) {
+        unset($user_ids[$key]);
+        $user_ids = array_values($user_ids); // reindex array
+        $group[5] = maybe_serialize($user_ids);
+        return GFAPI::update_entry($group);
+    }
+    return false;
+}
+
+function bbconnect_relationships_get_user_group_suggestions($user, array $groups = array(), array $relationships = array()) {
+    // @todo
+}
+
+function bbconnect_relationships_get_group_form() {
+    $group_form_id = get_option('bbconnect_relationships_group_form_id');
+    $group_form = array(
+            'title' => '[Connexions] Groups',
+            'is_active' => true,
+            'cssClass' => 'bbconnect',
+            'button' => array(
+                    'type' => 'text',
+                    'text' => 'Save',
+                    'imageUrl' => ''
+            ),
+            'confirmations' => array(
+                    0 => array(
+                            'id' => '5952f70811946',
+                            'name' => 'Default Confirmation',
+                            'isDefault' => true,
+                            'type' => 'message',
+                            'message' => 'Group saved successfully.',
+                    ),
+            ),
+            'fields' => array(
+                    0 => array(
+                            'type' => 'text',
+                            'id' => 1,
+                            'label' => 'Group Name',
+                            'isRequired' => true,
+                    ),
+                    1 => array(
+                            'type' => 'select',
+                            'id' => 2,
+                            'label' => 'Group Type',
+                            'isRequired' => true,
+                            'choices' => array(
+                                    0 => array(
+                                            'text' => 'Family',
+                                            'value' => 'Family',
+                                    ),
+                                    1 => array(
+                                            'text' => 'Business',
+                                            'value' => 'Business',
+                                    ),
+                                    2 => array(
+                                            'text' => 'Church',
+                                            'value' => 'Church',
+                                    ),
+                                    3 => array(
+                                            'text' => 'Event',
+                                            'value' => 'Event',
+                                    ),
+                                    4 => array(
+                                            'text' => 'Other',
+                                            'value' => 'Other',
+                                    ),
+                            ),
+                    ),
+                    2 => array(
+                            'type' => 'fileupload',
+                            'id' => 3,
+                            'label' => 'Icon',
+                            'isRequired' => false,
+                            'description' => 'Recommended dimensions 150x150px.',
+                            'maxFileSize' => 1,
+                            'multipleFiles' => false,
+                            'allowedExtensions' => 'jpg,jpeg,gif,png',
+                    ),
+                    3 => array(
+                            'type' => 'textarea',
+                            'id' => 4,
+                            'label' => 'Description',
+                            'isRequired' => false,
+                            'useRichTextEditor' => true,
+                    ),
+                    4 => array(
+                            'type' => 'list',
+                            'id' => 5,
+                            'label' => 'Members',
+                            'isRequired' => false,
+                    ),
+            ),
+    );
+
+    if (!$group_form_id || !GFAPI::form_id_exists($group_form_id)) { // If form doesn't exist, create it
+        $group_form_id = GFAPI::add_form($group_form);
+        update_option('bbconnect_relationships_group_form_id', $group_form_id);
+    } else { // Otherwise if we've created it previously, just update it to make sure it hasn't been modified and is the latest version
+        $group_form['id'] = $group_form_id;
+        GFAPI::update_form($group_form);
+    }
+
+    return $group_form_id;
+}
+
+add_filter('bbconnect_get_crm_forms', 'bbconnect_relationships_get_crm_forms', 0);
+function bbconnect_relationships_get_crm_forms(array $forms) {
+    $forms[] = bbconnect_relationships_get_group_form();
+    return $forms;
+}
