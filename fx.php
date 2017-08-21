@@ -30,10 +30,28 @@ function bbconnect_relationships_add_relationship($type, $user_id_a, $user_id_b)
     $success = $wpdb->insert($wpdb->bbconnect_relationships, $data, $format);
 
     if ($success) {
+        $user_a = new WP_User($user_id_a);
+        $user_b = new WP_User($user_id_b);
+        $tracking_args = array(
+                'type' => 'relationships',
+                'source' => 'bbconnect-relationships',
+                'title' => 'Relationship Added',
+                'description' => $user_a->display_name.' now has a '.$type.' relationship with <a href="users.php?page=bbconnect_edit_user&user_id='.$user_b->ID.'">'.$user_b->display_name.'</a>',
+                'user_id' => $user_id_a,
+                'email' => $user_a->user_email,
+        );
+        bbconnect_track_activity($tracking_args);
+
         // And the inverse
         $data['user_id_a'] = $user_id_b;
         $data['user_id_b'] = $user_id_a;
         $success = $wpdb->insert($wpdb->bbconnect_relationships, $data, $format);
+        if ($success) {
+            $tracking_args['description'] = $user_b->display_name.' now has a '.$type.' relationship with <a href="users.php?page=bbconnect_edit_user&user_id='.$user_a->ID.'">'.$user_a->display_name.'</a>';
+            $tracking_args['user_id'] = $user_id_b;
+            $tracking_args['email'] = $user_b->user_email;
+            bbconnect_track_activity($tracking_args);
+        }
     }
     return $success;
 }
@@ -61,10 +79,28 @@ function bbconnect_relationships_update_relationship($old_type, $user_id_a, $use
     $success = $wpdb->update($wpdb->bbconnect_relationships, $data, $where, $format, $where_format);
 
     if ($success) {
+        $user_a = new WP_User($user_id_a);
+        $user_b = new WP_User($user_id_b);
+        $tracking_args = array(
+                'type' => 'relationships',
+                'source' => 'bbconnect-relationships',
+                'title' => 'Relationship Updated',
+                'description' => $user_a->display_name.' now has a '.$new_type.' relationship with <a href="users.php?page=bbconnect_edit_user&user_id='.$user_b->ID.'">'.$user_b->display_name.'</a>',
+                'user_id' => $user_id_a,
+                'email' => $user_a->user_email,
+        );
+        bbconnect_track_activity($tracking_args);
+
         // And the inverse
         $where['user_id_a'] = $user_id_b;
         $where['user_id_b'] = $user_id_a;
         $success = $wpdb->update($wpdb->bbconnect_relationships, $data, $where, $format, $where_format);
+        if ($success) {
+            $tracking_args['description'] = $user_b->display_name.' now has a '.$new_type.' relationship with <a href="users.php?page=bbconnect_edit_user&user_id='.$user_a->ID.'">'.$user_a->display_name.'</a>';
+            $tracking_args['user_id'] = $user_id_b;
+            $tracking_args['email'] = $user_b->user_email;
+            bbconnect_track_activity($tracking_args);
+        }
     }
     return $success;
 }
@@ -87,10 +123,28 @@ function bbconnect_relationships_remove_relationship($type, $user_id_a, $user_id
     $success = $wpdb->delete($wpdb->bbconnect_relationships, $where, $format);
 
     if ($success) {
+        $user_a = new WP_User($user_id_a);
+        $user_b = new WP_User($user_id_b);
+        $tracking_args = array(
+                'type' => 'relationships',
+                'source' => 'bbconnect-relationships',
+                'title' => 'Relationship Removed',
+                'description' => $user_a->display_name.' no longer has a '.$type.' relationship with <a href="users.php?page=bbconnect_edit_user&user_id='.$user_b->ID.'">'.$user_b->display_name.'</a>',
+                'user_id' => $user_id_a,
+                'email' => $user_a->user_email,
+        );
+        bbconnect_track_activity($tracking_args);
+
         // And the inverse
         $where['user_id_a'] = $user_id_b;
         $where['user_id_b'] = $user_id_a;
         $success = $wpdb->delete($wpdb->bbconnect_relationships, $where, $format);
+        if ($success) {
+            $tracking_args['description'] = $user_b->display_name.' no longer has a '.$type.' relationship with <a href="users.php?page=bbconnect_edit_user&user_id='.$user_a->ID.'">'.$user_a->display_name.'</a>';
+            $tracking_args['user_id'] = $user_id_b;
+            $tracking_args['email'] = $user_b->user_email;
+            bbconnect_track_activity($tracking_args);
+        }
     }
     return $success;
 }
@@ -244,7 +298,18 @@ function bbconnect_relationships_add_user_to_group($user, $group) {
     if (!in_array($user->ID, $user_ids)) {
         $user_ids[] = (string)$user->ID; // Have to make sure it's a string else our search won't work
         $group[5] = maybe_serialize($user_ids);
-        return GFAPI::update_entry($group);
+        if (GFAPI::update_entry($group)) {
+            $tracking_args = array(
+                    'type' => 'groups',
+                    'source' => 'bbconnect-relationships',
+                    'title' => 'Group Added',
+                    'description' => $user->display_name.' is now a member of '.$group[1],
+                    'user_id' => $user->ID,
+                    'email' => $user->user_email,
+            );
+            bbconnect_track_activity($tracking_args);
+            return true;
+        }
     }
     return false;
 }
@@ -267,7 +332,18 @@ function bbconnect_relationships_remove_user_from_group($user, $group) {
         unset($user_ids[$key]);
         $user_ids = array_values($user_ids); // reindex array
         $group[5] = maybe_serialize($user_ids);
-        return GFAPI::update_entry($group);
+        if (GFAPI::update_entry($group)) {
+            $tracking_args = array(
+                    'type' => 'relationships',
+                    'source' => 'bbconnect-relationships',
+                    'title' => 'Group Removed',
+                    'description' => $user->display_name.' is no longer a member of '.$group[1],
+                    'user_id' => $user->ID,
+                    'email' => $user->user_email,
+            );
+            bbconnect_track_activity($tracking_args);
+            return true;
+        }
     }
     return false;
 }
@@ -372,4 +448,16 @@ add_filter('bbconnect_get_crm_forms', 'bbconnect_relationships_get_crm_forms', 0
 function bbconnect_relationships_get_crm_forms(array $forms) {
     $forms[] = bbconnect_relationships_get_group_form();
     return $forms;
+}
+
+add_filter('bbconnect_form_activity_details', 'bbconnect_relationships_form_activity_details', 1, 4);
+function bbconnect_relationships_form_activity_details($activity, $form, $entry, $agent) {
+    switch ($form['id']) {
+        case bbconnect_relationships_get_group_form():
+            $activity['title'] = 'New '.$entry[2].' group created: '.$entry[1];
+            $activity['details'] = $entry[4];
+            $activity['type'] = 'groups';
+            break;
+    }
+    return $activity;
 }

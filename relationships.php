@@ -48,3 +48,11 @@ function bbconnect_relationships_deactivate_notice() {
         unset($_GET['activate']);
     }
 }
+
+add_filter('bbconnect_activity_icon', 'bbconnect_relationships_activity_icon', 10, 2);
+function bbconnect_relationships_activity_icon($icon, $activity_type) {
+    if ($activity_type == 'relationships' || $activity_type == 'groups') {
+        $icon = plugin_dir_url(__FILE__).'images/activity-icon.png';
+    }
+    return $icon;
+}
