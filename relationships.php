@@ -7,9 +7,6 @@
  * Author: Brown Box
  * Author URI: http://brownbox.net.au
  * License: Proprietary Brown Box
- *
- * @todo Set name and description of plugin
- * @todo Replace all instances of "module" or "template" with relevant module name
  */
 define('BBCONNECT_RELATIONSHIPS_VERSION', '0.1');
 define('BBCONNECT_RELATIONSHIPS_DIR', plugin_dir_path(__FILE__));
