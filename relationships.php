@@ -20,7 +20,7 @@ require_once (BBCONNECT_RELATIONSHIPS_DIR.'fx.php');
 require_once (BBCONNECT_RELATIONSHIPS_DIR.'profile.php');
 
 function bbconnect_relationships_init() {
-    if (!defined('BBCONNECT_VER')) {
+    if (!defined('BBCONNECT_VER') || version_compare(BBCONNECT_VER, '2.5.7', '<')) {
         add_action('admin_init', 'bbconnect_relationships_deactivate');
         add_action('admin_notices', 'bbconnect_relationships_deactivate_notice');
         return;
@@ -43,7 +43,7 @@ function bbconnect_relationships_deactivate() {
 }
 
 function bbconnect_relationships_deactivate_notice() {
-    echo '<div class="updated"><p><strong>Connexions Relationships and Groups</strong> has been <strong>deactivated</strong> as it requires Connexions.</p></div>';
+    echo '<div class="updated"><p><strong>Connexions Relationships and Groups</strong> has been <strong>deactivated</strong> as it requires Connexions (v2.5.7 or later).</p></div>';
     if (isset($_GET['activate'])) {
         unset($_GET['activate']);
     }
