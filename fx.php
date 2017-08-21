@@ -429,6 +429,7 @@ function bbconnect_relationships_get_group_form() {
                             'id' => 5,
                             'label' => 'Members',
                             'isRequired' => false,
+                            'visibility' => 'hidden',
                     ),
             ),
     );

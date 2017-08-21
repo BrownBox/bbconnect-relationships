@@ -199,6 +199,7 @@ function bbconnect_relationships_profile_tab() {
         #bbconnect .bbconnect-relationships-groups-wrapper .bbconnect-relationships-group-header {cursor: pointer;}
         #bbconnect .bbconnect-relationships-group .bbconnect-relationships-group-header {padding: 0.5rem;}
         #bbconnect .bbconnect-relationships-group-header span {color: #999;}
+        #bbconnect .bbconnect-relationships-group-header a.edit {float: right; padding: 0.25rem;}
         #bbconnect .bbconnect-relationships-group-header a.button {float: right;}
         #bbconnect .bbconnect-relationships-group div.group-icon {float: left; margin-right: 0.5rem; width: 50px; height: 50px; background-position: center center; background-size: 45px auto; background-repeat: no-repeat;}
         #bbconnect .bbconnect-relationships-group h3 {padding: 0; border: 0;}
@@ -240,6 +241,7 @@ function bbconnect_relationships_profile_tab() {
         <div class="bbconnect-relationships-group group-<?php echo $group_details['id']; ?>" style="<?php echo $group_style; ?>">
             <div class="bbconnect-relationships-group-header clearfix" data-group-id="<?php echo $group_details['id']; ?>">
                 <div class="group-icon" style="background-image: url(<?php echo $group_details['image']; ?>);"></div>
+                <a href="users.php?page=bbconnect_submit_gravity_form&user_id=<?php echo $user_id; ?>&form_id=<?php echo bbconnect_relationships_get_group_form(); ?>&entry_id=<?php echo $group_details['id']; ?>" target="_blank" class="edit">Edit Group</a>
                 <h3><?php echo $group_details[1]; ?></h3>
                 <span><?php echo $group_details[2]; ?></span>
                 <a class="button" href="<?php echo add_query_arg(array('group_action' => 'remove', 'group_id' => $group_details['id']), $clean_url); ?>" onclick="return confirm('Are you sure you want to remove the user from this group?');">Remove</a>
@@ -326,7 +328,8 @@ function bbconnect_relationships_profile_tab() {
 <?php
     }
 
-    if (count($suggested_groups) > 0) {
+    if (count($suggested_groups) > 0) { // @todo
+    /*
 ?>
     <div style="width: 47.5%; float: left;">
         <h2>Suggested Groups</h2>
@@ -375,6 +378,7 @@ function bbconnect_relationships_profile_tab() {
         </table>
     </div>
 <?php
+    */
     }
 ?>
     <div id="add_rel" style="display: none;">
