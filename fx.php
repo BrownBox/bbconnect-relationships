@@ -452,7 +452,7 @@ function bbconnect_relationships_get_crm_forms(array $forms) {
 }
 
 add_filter('bbconnect_relationships_gf_quicklink_form_list', 'bbconnect_relationships_gf_quicklink_hide_forms');
-function bbconnect_gf_quicklink_hide_forms($forms) {
+function bbconnect_relationships_gf_quicklink_hide_forms($forms) {
     foreach ($forms as $idx => $form) {
         if ($form['id'] == bbconnect_relationships_get_group_form()) {
             unset($forms[$idx]);
