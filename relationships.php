@@ -3,12 +3,12 @@
  * Plugin Name: Connexions Relationships and Groups
  * Plugin URI: http://connexionscrm.com/
  * Description: Get a real understanding of how your contacts relate to each other using relationships and groups.
- * Version: 0.1.2
+ * Version: 0.1.3
  * Author: Brown Box
  * Author URI: http://brownbox.net.au
  * License: Proprietary Brown Box
  */
-define('BBCONNECT_RELATIONSHIPS_VERSION', '0.1.2');
+define('BBCONNECT_RELATIONSHIPS_VERSION', '0.1.3');
 define('BBCONNECT_RELATIONSHIPS_DIR', plugin_dir_path(__FILE__));
 define('BBCONNECT_RELATIONSHIPS_URL', plugin_dir_url(__FILE__));
 
@@ -32,6 +32,9 @@ function bbconnect_relationships_init() {
         // Plugin updates
         new BbConnectUpdates(__FILE__, 'BrownBox', 'bbconnect-relationships');
     }
+
+    $quicklinks_dir = BBCONNECT_RELATIONSHIPS_DIR.'quicklinks/';
+    bbconnect_quicklinks_recursive_include($quicklinks_dir);
 }
 add_action('plugins_loaded', 'bbconnect_relationships_init');
 

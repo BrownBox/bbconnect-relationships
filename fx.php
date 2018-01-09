@@ -472,3 +472,42 @@ function bbconnect_relationships_form_activity_details($activity, $form, $entry,
     }
     return $activity;
 }
+
+function bbconnect_relationships_create_group_from_emails($group_name, $group_type, array $emails) {
+    $group_form = bbconnect_relationships_get_group_form();
+
+    // Insert GF entry
+//     $_POST = array(); // Hack to allow multiple form submissions via API in single process
+    $entry = array(
+            'input_1' => $group_name,
+            'input_2' => $group_type,
+    );
+    GFAPI::submit_form($group_form, $entry);
+
+    // Because submit_form doesn't return the entry ID we have to go looking for it ourselves
+    $search_criteria = array(
+            'field_filters' => array(
+                    array(
+                            'key' => 1,
+                            'value' => $group_name,
+                    ),
+            ),
+    );
+    $groups = GFAPI::get_entries($group_form, $search_criteria);
+    if (count($groups) > 0) {
+        $group = array_shift($groups);
+        $group_id = $group['id'];
+
+        foreach ($emails as $email) {
+            $user_data = array(
+                    'email' => $email,
+                    'firstname' => 'Unknown',
+                    'lastname' => 'Unknown',
+            );
+            $user = bbconnect_get_user($user_data);
+            bbconnect_relationships_add_user_to_group($user, $group_id);
+        }
+        return $group_id;
+    }
+    return false;
+}
