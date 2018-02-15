@@ -68,10 +68,12 @@ function bbconnect_relationships_profile_tab() {
 
     // Get list of relationships
     $relationships = bbconnect_relationships_get_user_relationships($user_id);
+?>
+    <h2>Relationships <a class="page-title-action thickbox" href="#TB_inline?width=600&height=550&inlineId=add_rel">Add</a></h2>
+<?php
     if (count($relationships) > 0) {
         $second_level_relationships = bbconnect_relationships_get_user_second_level_relationships($user_id, $relationships);
 ?>
-    <h2>Relationships <a class="page-title-action thickbox" href="#TB_inline?width=600&height=550&inlineId=add_rel">Add</a></h2>
     <table class="bbconnect-relationships widefat striped">
         <thead>
             <tr>
