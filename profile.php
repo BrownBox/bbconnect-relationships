@@ -15,6 +15,7 @@ function bbconnect_relationships_profile_tab() {
     $all_types = bbconnect_relationships_get_relationship_types();
     $selected_rel_type = $_REQUEST['rel_type'];
     $clean_url = remove_query_arg(array('rel_action', 'relation_id', 'old_type', 'group_action', 'group_id'));
+    $second_level_relationships = $suggested_groups = array();
 
     // Handle relationship actions
     if (!empty($_REQUEST['rel_action']) && !empty($selected_rel_type)) {
