@@ -13,12 +13,33 @@ function bbconnect_relationships_get_relationship_types() {
 }
 
 /**
+ * Does the specified relationship already exist?
+ * @param string $type
+ * @param integer $user_id_a
+ * @param integer $user_id_b
+ */
+function bbconnect_relationships_relationship_exists($type, $user_id_a, $user_id_b) {
+    global $wpdb;
+    $format = array('%s', '%d', '%d');
+    $data = array(
+            'type' => $type,
+            'user_id_a' => $user_id_a,
+            'user_id_b' => $user_id_b,
+    );
+    return $wpdb->get_var($wpdb->prepare('SELECT count(*) FROM '.$wpdb->bbconnect_relationships.' WHERE type = %s AND user_id_a = %d AND user_id_b = %d', $type, $user_id_a, $user_id_b)) > 0;
+}
+
+/**
  * Add relationship between 2 users
  * @param string $type Type of relationship, e.g. alias, professional, family, personal
  * @param integer $user_id_a ID of one of the users
  * @param integer $user_id_b ID of the other user
+ * @param boolean $track Whether to add entry to activity log. Default true.
  */
-function bbconnect_relationships_add_relationship($type, $user_id_a, $user_id_b) {
+function bbconnect_relationships_add_relationship($type, $user_id_a, $user_id_b, $track = true) {
+    if (bbconnect_relationships_relationship_exists($type, $user_id_a, $user_id_b)) {
+        return false;
+    }
     global $wpdb;
     $format = array('%s', '%d', '%d');
     // Store relationship
@@ -32,21 +53,23 @@ function bbconnect_relationships_add_relationship($type, $user_id_a, $user_id_b)
     if ($success) {
         $user_a = new WP_User($user_id_a);
         $user_b = new WP_User($user_id_b);
-        $tracking_args = array(
-                'type' => 'relationships',
-                'source' => 'bbconnect-relationships',
-                'title' => 'Relationship Added',
-                'description' => $user_a->display_name.' now has a '.$type.' relationship with <a href="users.php?page=bbconnect_edit_user&user_id='.$user_b->ID.'">'.$user_b->display_name.'</a>',
-                'user_id' => $user_id_a,
-                'email' => $user_a->user_email,
-        );
-        bbconnect_track_activity($tracking_args);
+        if ($track) {
+            $tracking_args = array(
+                    'type' => 'relationships',
+                    'source' => 'bbconnect-relationships',
+                    'title' => 'Relationship Added',
+                    'description' => $user_a->display_name.' now has a '.$type.' relationship with <a href="users.php?page=bbconnect_edit_user&user_id='.$user_b->ID.'">'.$user_b->display_name.'</a>',
+                    'user_id' => $user_id_a,
+                    'email' => $user_a->user_email,
+            );
+            bbconnect_track_activity($tracking_args);
+        }
 
         // And the inverse
         $data['user_id_a'] = $user_id_b;
         $data['user_id_b'] = $user_id_a;
         $success = $wpdb->insert($wpdb->bbconnect_relationships, $data, $format);
-        if ($success) {
+        if ($success && $track) {
             $tracking_args['description'] = $user_b->display_name.' now has a '.$type.' relationship with <a href="users.php?page=bbconnect_edit_user&user_id='.$user_a->ID.'">'.$user_a->display_name.'</a>';
             $tracking_args['user_id'] = $user_id_b;
             $tracking_args['email'] = $user_b->user_email;
@@ -62,8 +85,12 @@ function bbconnect_relationships_add_relationship($type, $user_id_a, $user_id_b)
  * @param integer $user_id_a ID of one of the users
  * @param integer $user_id_b ID of the other user
  * @param string $new_type New relationship type
+ * @param boolean $track Whether to add entry to activity log. Default true.
  */
-function bbconnect_relationships_update_relationship($old_type, $user_id_a, $user_id_b, $new_type) {
+function bbconnect_relationships_update_relationship($old_type, $user_id_a, $user_id_b, $new_type, $track = true) {
+    if (!bbconnect_relationships_relationship_exists($old_type, $user_id_a, $user_id_b) || bbconnect_relationships_relationship_exists($new_type, $user_id_a, $user_id_b)) {
+        return false;
+    }
     global $wpdb;
     $format = array('%s');
     $where_format = array('%s', '%d', '%d');
@@ -81,21 +108,23 @@ function bbconnect_relationships_update_relationship($old_type, $user_id_a, $use
     if ($success) {
         $user_a = new WP_User($user_id_a);
         $user_b = new WP_User($user_id_b);
-        $tracking_args = array(
-                'type' => 'relationships',
-                'source' => 'bbconnect-relationships',
-                'title' => 'Relationship Updated',
-                'description' => $user_a->display_name.' now has a '.$new_type.' relationship with <a href="users.php?page=bbconnect_edit_user&user_id='.$user_b->ID.'">'.$user_b->display_name.'</a>',
-                'user_id' => $user_id_a,
-                'email' => $user_a->user_email,
-        );
-        bbconnect_track_activity($tracking_args);
+        if ($track) {
+            $tracking_args = array(
+                    'type' => 'relationships',
+                    'source' => 'bbconnect-relationships',
+                    'title' => 'Relationship Updated',
+                    'description' => $user_a->display_name.' now has a '.$new_type.' relationship with <a href="users.php?page=bbconnect_edit_user&user_id='.$user_b->ID.'">'.$user_b->display_name.'</a>',
+                    'user_id' => $user_id_a,
+                    'email' => $user_a->user_email,
+            );
+            bbconnect_track_activity($tracking_args);
+        }
 
         // And the inverse
         $where['user_id_a'] = $user_id_b;
         $where['user_id_b'] = $user_id_a;
         $success = $wpdb->update($wpdb->bbconnect_relationships, $data, $where, $format, $where_format);
-        if ($success) {
+        if ($success && $track) {
             $tracking_args['description'] = $user_b->display_name.' now has a '.$new_type.' relationship with <a href="users.php?page=bbconnect_edit_user&user_id='.$user_a->ID.'">'.$user_a->display_name.'</a>';
             $tracking_args['user_id'] = $user_id_b;
             $tracking_args['email'] = $user_b->user_email;
@@ -110,8 +139,12 @@ function bbconnect_relationships_update_relationship($old_type, $user_id_a, $use
  * @param string $type Type of relationship, e.g. alias, professional, family, personal
  * @param integer $user_id_a ID of one of the users
  * @param integer $user_id_b ID of the other user
+ * @param boolean $track Whether to add entry to activity log. Default true.
  */
-function bbconnect_relationships_remove_relationship($type, $user_id_a, $user_id_b) {
+function bbconnect_relationships_remove_relationship($type, $user_id_a, $user_id_b, $track = true) {
+    if (!bbconnect_relationships_relationship_exists($type, $user_id_a, $user_id_b)) {
+        return false;
+    }
     global $wpdb;
     $format = array('%s', '%d', '%d');
     // Delete relationship
@@ -125,21 +158,23 @@ function bbconnect_relationships_remove_relationship($type, $user_id_a, $user_id
     if ($success) {
         $user_a = new WP_User($user_id_a);
         $user_b = new WP_User($user_id_b);
-        $tracking_args = array(
-                'type' => 'relationships',
-                'source' => 'bbconnect-relationships',
-                'title' => 'Relationship Removed',
-                'description' => $user_a->display_name.' no longer has a '.$type.' relationship with <a href="users.php?page=bbconnect_edit_user&user_id='.$user_b->ID.'">'.$user_b->display_name.'</a>',
-                'user_id' => $user_id_a,
-                'email' => $user_a->user_email,
-        );
-        bbconnect_track_activity($tracking_args);
+        if ($track) {
+            $tracking_args = array(
+                    'type' => 'relationships',
+                    'source' => 'bbconnect-relationships',
+                    'title' => 'Relationship Removed',
+                    'description' => $user_a->display_name.' no longer has a '.$type.' relationship with <a href="users.php?page=bbconnect_edit_user&user_id='.$user_b->ID.'">'.$user_b->display_name.'</a>',
+                    'user_id' => $user_id_a,
+                    'email' => $user_a->user_email,
+            );
+            bbconnect_track_activity($tracking_args);
+        }
 
         // And the inverse
         $where['user_id_a'] = $user_id_b;
         $where['user_id_b'] = $user_id_a;
         $success = $wpdb->delete($wpdb->bbconnect_relationships, $where, $format);
-        if ($success) {
+        if ($success && $track) {
             $tracking_args['description'] = $user_b->display_name.' no longer has a '.$type.' relationship with <a href="users.php?page=bbconnect_edit_user&user_id='.$user_a->ID.'">'.$user_a->display_name.'</a>';
             $tracking_args['user_id'] = $user_id_b;
             $tracking_args['email'] = $user_b->user_email;
@@ -191,7 +226,9 @@ function bbconnect_relationships_get_user_second_level_relationships($user, arra
         foreach ($relationships as $rel_type => $related_users) {
             $second_relationships[$rel_type] = array();
             foreach ($related_users as $rel_user_id) {
-                $second_relationships[$rel_type] += bbconnect_relationships_get_user_relationships_by_type($rel_user_id, $rel_type);
+                if (false !== ($relations_relations = bbconnect_relationships_get_user_relationships_by_type($rel_user_id, $rel_type))) {
+                    $second_relationships[$rel_type] += $relations_relations;
+                }
             }
             // Now filter out the user themself and their direct connections
             foreach ($second_relationships[$rel_type] as $idx => $second_rel_user_id) {
@@ -285,9 +322,10 @@ function bbconnect_relationships_get_group_members($group) {
  * Add user to a group
  * @param WP_User|integer $user User to add to group. Can be either user ID or WP_User object.
  * @param array|integer $group GF entry or entry ID
+ * @param boolean $track Whether to add entry to activity log. Default true.
  * @return boolean|WP_Error True on success, False if user already exists in group, WP_Error if something else went wrong
  */
-function bbconnect_relationships_add_user_to_group($user, $group) {
+function bbconnect_relationships_add_user_to_group($user, $group, $track = true) {
     if (is_numeric($user)) {
         $user = get_user_by('id', $user);
     }
@@ -299,15 +337,17 @@ function bbconnect_relationships_add_user_to_group($user, $group) {
         $user_ids[] = (string)$user->ID; // Have to make sure it's a string else our search won't work
         $group[5] = maybe_serialize($user_ids);
         if (GFAPI::update_entry($group)) {
-            $tracking_args = array(
-                    'type' => 'groups',
-                    'source' => 'bbconnect-relationships',
-                    'title' => 'Group Added',
-                    'description' => $user->display_name.' is now a member of '.$group[1],
-                    'user_id' => $user->ID,
-                    'email' => $user->user_email,
-            );
-            bbconnect_track_activity($tracking_args);
+            if ($track) {
+                $tracking_args = array(
+                        'type' => 'groups',
+                        'source' => 'bbconnect-relationships',
+                        'title' => 'Group Added',
+                        'description' => $user->display_name.' is now a member of '.$group[1],
+                        'user_id' => $user->ID,
+                        'email' => $user->user_email,
+                );
+                bbconnect_track_activity($tracking_args);
+            }
             return true;
         }
     }
@@ -318,9 +358,10 @@ function bbconnect_relationships_add_user_to_group($user, $group) {
  * Remove user from a group
  * @param WP_User|integer $user User to remove from group. Can be either user ID or WP_User object.
  * @param array|integer $group GF entry or entry ID
+ * @param boolean $track Whether to add entry to activity log. Default true.
  * @return boolean|WP_Error True on success, False if user doesn't exist in group, WP_Error if something else went wrong
  */
-function bbconnect_relationships_remove_user_from_group($user, $group) {
+function bbconnect_relationships_remove_user_from_group($user, $group, $track = true) {
     if (is_numeric($user)) {
         $user = get_user_by('id', $user);
     }
@@ -333,15 +374,17 @@ function bbconnect_relationships_remove_user_from_group($user, $group) {
         $user_ids = array_values($user_ids); // reindex array
         $group[5] = maybe_serialize($user_ids);
         if (GFAPI::update_entry($group)) {
-            $tracking_args = array(
-                    'type' => 'relationships',
-                    'source' => 'bbconnect-relationships',
-                    'title' => 'Group Removed',
-                    'description' => $user->display_name.' is no longer a member of '.$group[1],
-                    'user_id' => $user->ID,
-                    'email' => $user->user_email,
-            );
-            bbconnect_track_activity($tracking_args);
+            if ($track) {
+                $tracking_args = array(
+                        'type' => 'relationships',
+                        'source' => 'bbconnect-relationships',
+                        'title' => 'Group Removed',
+                        'description' => $user->display_name.' is no longer a member of '.$group[1],
+                        'user_id' => $user->ID,
+                        'email' => $user->user_email,
+                );
+                bbconnect_track_activity($tracking_args);
+            }
             return true;
         }
     }
@@ -510,4 +553,23 @@ function bbconnect_relationships_create_group_from_emails($group_name, $group_ty
         return $group_id;
     }
     return false;
+}
+
+add_action('bbconnect_merge_users', 'bbconnect_relationships_merge_users', 10, 2);
+function bbconnect_relationships_merge_users($to_user, $old_user) {
+    $relationships = bbconnect_relationships_get_user_relationships($old_user);
+    foreach ($relationships as $type => $rel_users) {
+        foreach ($rel_users as $rel_user) {
+            bbconnect_relationships_remove_relationship($type, $old_user->ID, $rel_user, false);
+            if ($rel_user != $to_user && $rel_user != $old_user->ID) {
+                bbconnect_relationships_add_relationship($type, $to_user, $rel_user, false);
+            }
+        }
+    }
+    $groups = bbconnect_relationships_get_user_groups($old_user);
+    foreach ($groups as $group) {
+        // Pass group ID rather than entire entry to force it to refresh from DB
+        bbconnect_relationships_remove_user_from_group($old_user, $group['id'], false);
+        bbconnect_relationships_add_user_to_group($to_user, $group['id'], false);
+    }
 }
