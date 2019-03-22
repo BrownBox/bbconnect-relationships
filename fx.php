@@ -4,12 +4,18 @@
  * @return array
  */
 function bbconnect_relationships_get_relationship_types() {
-    return array(
+    $types = apply_filters('bbconnect_relationships_relationship_types', array(
             'alias',
             'family',
             'personal',
             'professional',
-    );
+    ));
+
+    // Do a bit of cleanup
+    $types = array_unique($types);
+    sort($types);
+
+    return $types;
 }
 
 /**
