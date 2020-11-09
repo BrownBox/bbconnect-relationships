@@ -113,10 +113,10 @@ function bbconnect_relationships_profile_tab() {
             foreach ($relations as $relation_id) {
                 $relation = new WP_User($relation_id);
                 $meta = get_user_meta($relation_id);
-                $transaction_amount = (float)$meta['kpi_transaction_amount'][0];
-                $transaction_count = (int)$meta['kpi_transaction_count'][0];
-                $last_transaction_date = $meta['kpi_last_transaction_date'][0];
-                $days_since_transaction = $meta['kpi_days_since_last_transaction'][0];
+                $transaction_amount = (float)$meta['bbconnect_kpi_transaction_amount'][0];
+                $transaction_count = (int)$meta['bbconnect_kpi_transaction_count'][0];
+                $last_transaction_date = $meta['bbconnect_kpi_last_transaction_date'][0];
+                $days_since_transaction = $meta['bbconnect_kpi_days_since_last_transaction'][0];
 
                 $totals['kpi_transaction_amount'] += $transaction_amount;
                 $totals['kpi_transaction_count'] += $transaction_count;
