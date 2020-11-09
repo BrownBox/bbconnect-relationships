@@ -339,6 +339,9 @@ function bbconnect_relationships_add_user_to_group($user, $group, $track = true)
         $group = bbconnect_relationships_get_group($group);
     }
     $user_ids = maybe_unserialize($group[5]);
+    if (empty($user_ids)) {
+    	$user_ids = array();
+    }
     if (!in_array($user->ID, $user_ids)) {
         $user_ids[] = (string)$user->ID; // Have to make sure it's a string else our search won't work
         $group[5] = maybe_serialize($user_ids);
@@ -375,6 +378,9 @@ function bbconnect_relationships_remove_user_from_group($user, $group, $track = 
         $group = bbconnect_relationships_get_group($group);
     }
     $user_ids = maybe_unserialize($group[5]);
+    if (empty($user_ids)) {
+    	$user_ids = array();
+    }
     if (false !== ($key = array_search($user->ID, $user_ids))) {
         unset($user_ids[$key]);
         $user_ids = array_values($user_ids); // reindex array
